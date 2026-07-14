@@ -367,7 +367,7 @@
       el.dataset.id = sec.id;
       el.innerHTML = `
         <div class="section-head">
-          <input class="sec-title" placeholder="Section title (e.g. Health & Safety)" value="${esc(sec.title)}">
+          <input class="sec-title" placeholder="Section title (e.g. Progress, Budget, Quality)" value="${esc(sec.title)}">
           <button class="icon-btn sec-up" title="Move up">&#8593;</button>
           <button class="icon-btn sec-down" title="Move down">&#8595;</button>
           <button class="icon-btn sec-del" title="Delete section">&#10005;</button>
