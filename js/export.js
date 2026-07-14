@@ -104,8 +104,10 @@ const Exporter = (() => {
 
   <table class="meta">
     ${metaRow('Project', project.name)}
+    ${metaRow('Project aspect', project.aspect)}
     ${metaRow('Reference', project.ref)}
-    ${metaRow('Client', project.client)}
+    ${metaRow('CAD name', project.cadName)}
+    ${metaRow('CAD version', project.cadVersion)}
     ${metaRow('Location', project.location)}
     ${metaRow('Project status', STATUS_LABELS[project.status] || project.status)}
     ${metaRow('Review date', review.date)}

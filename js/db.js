@@ -64,7 +64,13 @@ const DB = (() => {
     async getSettings() {
       const rec = await this.get('settings', 'app');
       return Object.assign(
-        { reviewer: '', company: '', aiEnabled: false, apiKey: '' },
+        {
+          reviewer: '',
+          company: '',
+          aiEnabled: false,
+          apiKey: '',
+          people: ['Fred Marsh', 'Matt Newitt', 'Alex Clarke', 'Anya Drake'],
+        },
         rec ? rec.value : {}
       );
     },

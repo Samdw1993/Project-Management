@@ -93,7 +93,7 @@
       const filtered = projects.filter((p) => {
         if (listFilter.status !== 'all' && p.status !== listFilter.status) return false;
         if (!q) return true;
-        const hay = [p.name, p.ref, p.client, p.location, (p.tags || []).join(' ')]
+        const hay = [p.name, p.aspect, p.ref, p.cadName, p.location, (p.tags || []).join(' ')]
           .join(' ')
           .toLowerCase();
         return hay.includes(q);
@@ -113,7 +113,7 @@
         <a class="card row-card" href="#/project/${p.id}">
           <div class="row-main">
             <div class="row-title">${esc(p.name)}</div>
-            <div class="row-sub">${esc([p.ref, p.client].filter(Boolean).join(' · '))}</div>
+            <div class="row-sub">${esc([p.ref, p.aspect].filter(Boolean).join(' · '))}</div>
             <div class="row-sub muted">${esc(p.location || '')}</div>
           </div>
           <div class="row-side">
@@ -154,13 +154,15 @@
     const existing = id ? await DB.get('projects', id) : null;
     setHeader(existing ? 'Edit project' : 'New project', existing ? `#/project/${id}` : '#/projects');
 
-    const p = existing || { name: '', ref: '', client: '', location: '', status: 'active', tags: [], notes: '' };
+    const p = existing || { name: '', aspect: '', ref: '', cadName: '', cadVersion: '', location: '', status: 'active', tags: [], notes: '' };
 
     view.innerHTML = `
       <form id="projectForm" class="card form">
         <label>Project name *<input name="name" required value="${esc(p.name)}"></label>
+        <label>Project aspect<input name="aspect" value="${esc(p.aspect)}"></label>
         <label>Reference / number<input name="ref" value="${esc(p.ref)}"></label>
-        <label>Client<input name="client" value="${esc(p.client)}"></label>
+        <label>CAD name<input name="cadName" value="${esc(p.cadName)}"></label>
+        <label>CAD version<input name="cadVersion" value="${esc(p.cadVersion)}"></label>
         <label>Location<input name="location" value="${esc(p.location)}"></label>
         <label>Status
           <select name="status">
@@ -180,8 +182,10 @@
       const rec = {
         id: existing ? existing.id : uid(),
         name: String(f.get('name')).trim(),
+        aspect: String(f.get('aspect')).trim(),
         ref: String(f.get('ref')).trim(),
-        client: String(f.get('client')).trim(),
+        cadName: String(f.get('cadName')).trim(),
+        cadVersion: String(f.get('cadVersion')).trim(),
         location: String(f.get('location')).trim(),
         status: String(f.get('status')),
         tags: String(f.get('tags')).split(',').map((t) => t.trim()).filter(Boolean),
@@ -225,8 +229,10 @@
     reviews.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt - a.createdAt));
 
     const detailRows = [
+      ['Aspect', p.aspect],
       ['Reference', p.ref],
-      ['Client', p.client],
+      ['CAD name', p.cadName],
+      ['CAD version', p.cadVersion],
       ['Location', p.location],
       ['Tags', (p.tags || []).join(', ')],
       ['Description', p.notes],
@@ -290,6 +296,18 @@
     dictationTarget = null;
   }
 
+  function reviewerOptions(people, current) {
+    const names = [...people];
+    if (current && !names.includes(current)) names.push(current);
+    return (
+      `<option value="">Select reviewer…</option>` +
+      names
+        .map((n) => `<option value="${esc(n)}" ${n === current ? 'selected' : ''}>${esc(n)}</option>`)
+        .join('') +
+      `<option value="__add__">+ Add new person…</option>`
+    );
+  }
+
   async function viewReview(id) {
     const review = await DB.get('reviews', id);
     if (!review) { location.hash = '#/projects'; return; }
@@ -297,6 +315,7 @@
     setHeader(project ? project.name : 'Review', `#/project/${review.projectId}`);
 
     const speechSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    const appSettings = await DB.getSettings();
 
     view.innerHTML = `
       <div class="card form" id="reviewMeta">
@@ -304,7 +323,9 @@
           <label>Review title<input id="rvTitle" value="${esc(review.title)}"></label>
           <label>Date<input id="rvDate" type="date" value="${esc(review.date)}"></label>
         </div>
-        <label>Reviewed by<input id="rvReviewer" value="${esc(review.reviewer)}"></label>
+        <label>Reviewed by
+          <select id="rvReviewer">${reviewerOptions(appSettings.people, review.reviewer)}</select>
+        </label>
       </div>
 
       <h2 class="section-label">Review sections</h2>
@@ -354,6 +375,25 @@
 
     document.getElementById('reviewMeta').addEventListener('input', scheduleSave);
     sectionsEl.addEventListener('input', scheduleSave);
+
+    /* "Reviewed by" dropdown: NPI team + add-new-person */
+    const reviewerSel = document.getElementById('rvReviewer');
+    reviewerSel.addEventListener('change', async () => {
+      if (reviewerSel.value !== '__add__') { scheduleSave(); return; }
+      const name = (prompt('Name of new reviewer:') || '').trim();
+      const settings = await DB.getSettings();
+      if (name) {
+        if (!settings.people.includes(name)) {
+          settings.people.push(name);
+          await DB.saveSettings(settings);
+        }
+        reviewerSel.innerHTML = reviewerOptions(settings.people, name);
+        toast(name + ' added to the team list');
+      } else {
+        reviewerSel.innerHTML = reviewerOptions(settings.people, review.reviewer || '');
+      }
+      scheduleSave();
+    });
 
     /* --- section rendering --- */
     async function renderSections() {
@@ -574,12 +614,13 @@
     document.getElementById('settingsForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = new FormData(e.target);
-      await DB.saveSettings({
+      const current = await DB.getSettings();
+      await DB.saveSettings(Object.assign(current, {
         reviewer: String(f.get('reviewer')).trim(),
         company: String(f.get('company')).trim(),
         aiEnabled: f.get('aiEnabled') === 'on',
         apiKey: String(f.get('apiKey')).trim(),
-      });
+      }));
       toast('Settings saved');
       location.hash = '#/projects';
     };
