@@ -15,7 +15,7 @@ offline once loaded.
 | 🎤 Dictation | Per-section mic button converts speech to text live (Web Speech API). Say "new point" / "full stop" to structure as you speak. |
 | ✨ Tidy | One tap turns raw dictation into concise bullet points. Two modes: built-in **offline tidy** (removes filler words, splits into points), or optional **AI tidy** powered by Claude (bring your own Anthropic API key in Settings). |
 | 🗂 Project database | Manually add projects (name, project aspect, reference, CAD name, CAD version, location, status, tags). Search and filter the list. |
-| 📋 Reviews with sections | Each review has metadata (title, date, reviewer picked from the NPI team list — new people can be added from the dropdown) plus any number of sections (e.g. Progress, Budget, Quality, Risks), each with notes and photos. Sections can be reordered. |
+| 📋 Reviews with sections | Each review has metadata (title, date, one or more reviewers picked from the NPI team list — new people can be added on the fly) plus any number of sections (e.g. Progress, Budget, Quality, Risks), each with notes and photos. Sections can be reordered. |
 | 📄 Standardised export | One tap builds the review form: header, project/review metadata table, numbered sections with bullets and captioned photos, sign-off block. Print / Save as PDF, or download as an HTML file. |
 | 📱 Installable + offline | Add to Home Screen on your phone; the app shell is cached by a service worker. |
 

@@ -152,6 +152,21 @@ body {
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .settings-sub { font-size: 15px; margin: 6px 0 6px; color: var(--navy); }
 
+.form .field { margin-bottom: 12px; }
+.form .field-label { display: block; font-size: 13.5px; font-weight: 600; color: #33465c; margin-bottom: 6px; }
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 26px; }
+.reviewer-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--navy); border-color: var(--navy); color: #fff;
+  cursor: default;
+}
+.chip-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%; padding: 0;
+  border: 0; background: rgba(255, 255, 255, 0.25); color: #fff;
+  font-size: 10px; line-height: 1; cursor: pointer;
+}
+
 /* ---------- review sections ---------- */
 .section-head { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; }
 .sec-title {

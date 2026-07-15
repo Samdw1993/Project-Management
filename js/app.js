@@ -275,7 +275,7 @@
         projectId: id,
         title: 'Project review',
         date: today(),
-        reviewer: settings.reviewer || '',
+        reviewers: settings.reviewer ? [settings.reviewer] : [],
         sections: [{ id: uid(), title: 'General', notes: '', photos: [] }],
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -296,14 +296,12 @@
     dictationTarget = null;
   }
 
-  function reviewerOptions(people, current) {
-    const names = [...people];
-    if (current && !names.includes(current)) names.push(current);
+  /* Options for the "add a reviewer" select: team members not already picked. */
+  function reviewerAddOptions(people, selected) {
+    const available = people.filter((n) => !selected.includes(n));
     return (
-      `<option value="">Select reviewer…</option>` +
-      names
-        .map((n) => `<option value="${esc(n)}" ${n === current ? 'selected' : ''}>${esc(n)}</option>`)
-        .join('') +
+      `<option value="">+ Add reviewer…</option>` +
+      available.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('') +
       `<option value="__add__">+ Add new person…</option>`
     );
   }
@@ -317,15 +315,22 @@
     const speechSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
     const appSettings = await DB.getSettings();
 
+    // Multiple reviewers per review. Migrate any older single-`reviewer` reviews.
+    const reviewers = Array.isArray(review.reviewers)
+      ? review.reviewers.slice()
+      : review.reviewer ? [review.reviewer] : [];
+
     view.innerHTML = `
       <div class="card form" id="reviewMeta">
         <div class="grid-2">
           <label>Review title<input id="rvTitle" value="${esc(review.title)}"></label>
           <label>Date<input id="rvDate" type="date" value="${esc(review.date)}"></label>
         </div>
-        <label>Reviewed by
-          <select id="rvReviewer">${reviewerOptions(appSettings.people, review.reviewer)}</select>
-        </label>
+        <div class="field">
+          <span class="field-label">Reviewed by</span>
+          <div class="chip-list" id="reviewerChips"></div>
+          <select id="reviewerAddSel"></select>
+        </div>
       </div>
 
       <h2 class="section-label">Review sections</h2>
@@ -352,7 +357,8 @@
     async function save() {
       review.title = document.getElementById('rvTitle').value;
       review.date = document.getElementById('rvDate').value;
-      review.reviewer = document.getElementById('rvReviewer').value;
+      review.reviewers = reviewers.slice();
+      delete review.reviewer; // superseded by the reviewers array
       review.sections = [...sectionsEl.querySelectorAll('.section-card')].map((el) => {
         const secId = el.dataset.id;
         const old = review.sections.find((s) => s.id === secId) || { photos: [] };
@@ -376,24 +382,56 @@
     document.getElementById('reviewMeta').addEventListener('input', scheduleSave);
     sectionsEl.addEventListener('input', scheduleSave);
 
-    /* "Reviewed by" dropdown: NPI team + add-new-person */
-    const reviewerSel = document.getElementById('rvReviewer');
-    reviewerSel.addEventListener('change', async () => {
-      if (reviewerSel.value !== '__add__') { scheduleSave(); return; }
-      const name = (prompt('Name of new reviewer:') || '').trim();
-      const settings = await DB.getSettings();
-      if (name) {
-        if (!settings.people.includes(name)) {
-          settings.people.push(name);
-          await DB.saveSettings(settings);
+    /* "Reviewed by" — multiple reviewers as chips, plus NPI team + add-new-person */
+    const reviewerChips = document.getElementById('reviewerChips');
+    const reviewerAddSel = document.getElementById('reviewerAddSel');
+
+    function renderReviewerChips() {
+      reviewerChips.innerHTML = reviewers.length
+        ? reviewers
+            .map(
+              (n, i) => `<span class="chip reviewer-chip">${esc(n)}
+                <button type="button" class="chip-remove" data-i="${i}" aria-label="Remove ${esc(n)}">&#10005;</button>
+              </span>`
+            )
+            .join('')
+        : '<span class="muted small">No reviewers added yet.</span>';
+      reviewerChips.querySelectorAll('.chip-remove').forEach((btn) => {
+        btn.onclick = () => {
+          reviewers.splice(Number(btn.dataset.i), 1);
+          renderReviewerChips();
+          renderReviewerAddSelect();
+          scheduleSave();
+        };
+      });
+    }
+    function renderReviewerAddSelect() {
+      reviewerAddSel.innerHTML = reviewerAddOptions(appSettings.people, reviewers);
+    }
+
+    reviewerAddSel.addEventListener('change', async () => {
+      const val = reviewerAddSel.value;
+      if (!val) return;
+      if (val === '__add__') {
+        const name = (prompt('Name of new reviewer:') || '').trim();
+        if (name) {
+          if (!appSettings.people.includes(name)) {
+            appSettings.people.push(name);
+            await DB.saveSettings(appSettings);
+          }
+          if (!reviewers.includes(name)) reviewers.push(name);
+          toast(name + ' added to the team list');
         }
-        reviewerSel.innerHTML = reviewerOptions(settings.people, name);
-        toast(name + ' added to the team list');
-      } else {
-        reviewerSel.innerHTML = reviewerOptions(settings.people, review.reviewer || '');
+      } else if (!reviewers.includes(val)) {
+        reviewers.push(val);
       }
+      renderReviewerChips();
+      renderReviewerAddSelect();
       scheduleSave();
     });
+
+    renderReviewerChips();
+    renderReviewerAddSelect();
 
     /* --- section rendering --- */
     async function renderSections() {

@@ -44,6 +44,14 @@ const Exporter = (() => {
       })
       .join('');
 
+    const reviewerList = Array.isArray(review.reviewers)
+      ? review.reviewers.filter(Boolean)
+      : review.reviewer ? [review.reviewer] : [];
+
+    const signoffHtml = (reviewerList.length ? reviewerList : ['reviewer'])
+      .map((n) => `<div class="line">Signed (${esc(n)})</div><div class="line">Date</div>`)
+      .join('');
+
     const generated = new Date().toLocaleString();
 
     return `<!DOCTYPE html>
@@ -111,14 +119,13 @@ const Exporter = (() => {
     ${metaRow('Location', project.location)}
     ${metaRow('Project status', STATUS_LABELS[project.status] || project.status)}
     ${metaRow('Review date', review.date)}
-    ${metaRow('Reviewed by', review.reviewer)}
+    ${metaRow('Reviewed by', reviewerList.join(', '))}
   </table>
 
   ${sectionsHtml || '<p class="none">No review sections.</p>'}
 
   <div class="signoff">
-    <div class="line">Signed (reviewer)</div>
-    <div class="line">Date</div>
+    ${signoffHtml}
   </div>
 
   <div class="doc-footer">Generated ${esc(generated)} · Project Review app</div>
