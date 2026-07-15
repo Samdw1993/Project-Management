@@ -1,5 +1,5 @@
 /* Service worker: caches the app shell so the app works offline once visited. */
-const CACHE = 'project-review-v1';
+const CACHE = 'project-review-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -27,23 +27,23 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-/* Same-origin GET: stale-while-revalidate. Cross-origin (e.g. the Anthropic API) passes through. */
+/* Same-origin GET: network-first, so a fresh deploy shows up on the very next
+ * load instead of a stale-while-revalidate cached copy. Cache is only used as
+ * an offline fallback (and cross-origin requests, e.g. the Anthropic API, pass
+ * through untouched). */
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
 
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const network = fetch(e.request)
-        .then((resp) => {
-          if (resp.ok) {
-            const copy = resp.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
-          }
-          return resp;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(e.request)
+      .then((resp) => {
+        if (resp && resp.ok) {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return resp;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
