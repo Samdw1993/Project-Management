@@ -42,6 +42,16 @@
   /* ---------- routing ---------- */
 
   let listFilter = { search: '', status: 'all' };
+  let reviewFilter = { search: '' };
+
+  /* Segmented control shown on the two home screens (Projects / Reviews). */
+  function homeTabs(active) {
+    return `
+      <div class="tabs">
+        <a class="tab ${active === 'projects' ? 'active' : ''}" href="#/projects">Projects</a>
+        <a class="tab ${active === 'reviews' ? 'active' : ''}" href="#/reviews">Saved reviews</a>
+      </div>`;
+  }
 
   async function route() {
     stopDictation();
@@ -49,9 +59,10 @@
     const parts = hash.replace(/^#\//, '').split('/');
     try {
       if (parts[0] === 'projects' || parts[0] === '') await viewProjects();
+      else if (parts[0] === 'reviews') await viewReviews();
       else if (parts[0] === 'project-edit') await viewProjectForm(parts[1]);
       else if (parts[0] === 'project') await viewProject(parts[1]);
-      else if (parts[0] === 'review') await viewReview(parts[1]);
+      else if (parts[0] === 'review') await viewReview(parts[1], parts[2]);
       else if (parts[0] === 'settings') await viewSettings();
       else await viewProjects();
     } catch (err) {
@@ -75,6 +86,7 @@
     projects.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
     view.innerHTML = `
+      ${homeTabs('projects')}
       <div class="toolbar">
         <input id="searchBox" type="search" placeholder="Search projects…" value="${esc(listFilter.search)}">
         <div class="chips" id="statusChips">
@@ -145,6 +157,97 @@
     document.getElementById('newProjectBtn').onclick = () => (location.hash = '#/project-edit');
 
     paintChips();
+    render();
+  }
+
+  /* ---------- all-reviews library ---------- */
+
+  function reviewReviewers(r) {
+    const list = Array.isArray(r.reviewers) ? r.reviewers : r.reviewer ? [r.reviewer] : [];
+    return list.filter(Boolean);
+  }
+
+  async function viewReviews() {
+    setHeader('Saved reviews', null);
+    const [projects, reviews] = [await DB.getAll('projects'), await DB.getAll('reviews')];
+    const projectById = {};
+    for (const p of projects) projectById[p.id] = p;
+
+    // Most recent first (by review date, then last edited).
+    reviews.sort(
+      (a, b) => (b.date || '').localeCompare(a.date || '') || (b.updatedAt || 0) - (a.updatedAt || 0)
+    );
+
+    view.innerHTML = `
+      ${homeTabs('reviews')}
+      <div class="toolbar">
+        <input id="reviewSearch" type="search" placeholder="Search reviews (project, title, reviewer, date)…"
+          value="${esc(reviewFilter.search)}">
+      </div>
+      <div id="reviewList" class="list"></div>
+    `;
+
+    const listEl = document.getElementById('reviewList');
+
+    function render() {
+      const q = reviewFilter.search.trim().toLowerCase();
+      const filtered = reviews.filter((r) => {
+        if (!q) return true;
+        const project = projectById[r.projectId];
+        const hay = [
+          project && project.name,
+          project && project.ref,
+          r.title,
+          r.date,
+          reviewReviewers(r).join(' '),
+        ]
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(q);
+      });
+
+      if (!filtered.length) {
+        listEl.innerHTML = `<div class="empty">
+          ${reviews.length
+            ? 'No reviews match your search.'
+            : 'No reviews saved yet. Open a project and tap <strong>New review</strong> to create one — it will appear here automatically.'}
+        </div>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered
+        .map((r) => {
+          const project = projectById[r.projectId];
+          const nSec = (r.sections || []).length;
+          const nPh = (r.sections || []).reduce((n, s) => n + (s.photos || []).length, 0);
+          const reviewers = reviewReviewers(r).join(', ');
+          const projectName = project ? project.name : 'Unknown project';
+          const status = project ? project.status : '';
+          return `
+        <a class="card row-card" href="#/review/${r.id}/lib">
+          <div class="row-main">
+            <div class="row-title">${esc(r.title || 'Review')}</div>
+            <div class="row-sub">${esc(projectName)}</div>
+            <div class="row-sub muted">${esc(
+              [r.date, reviewers, `${nSec} section${nSec === 1 ? '' : 's'}`, `${nPh} photo${nPh === 1 ? '' : 's'}`]
+                .filter(Boolean)
+                .join(' · ')
+            )}</div>
+          </div>
+          <div class="row-side">
+            ${status ? `<span class="pill pill-${esc(status)}">${esc(statusLabel(status))}</span>` : ''}
+            <span class="chev">&#8250;</span>
+          </div>
+        </a>`;
+        })
+        .join('');
+    }
+
+    document.getElementById('reviewSearch').addEventListener('input', (e) => {
+      reviewFilter.search = e.target.value;
+      render();
+    });
+
     render();
   }
 
@@ -306,11 +409,13 @@
     );
   }
 
-  async function viewReview(id) {
+  async function viewReview(id, origin) {
     const review = await DB.get('reviews', id);
     if (!review) { location.hash = '#/projects'; return; }
     const project = await DB.get('projects', review.projectId);
-    setHeader(project ? project.name : 'Review', `#/project/${review.projectId}`);
+    // Return to the reviews library if opened from there, else the project.
+    const backHash = origin === 'lib' ? '#/reviews' : `#/project/${review.projectId}`;
+    setHeader(project ? project.name : 'Review', backHash);
 
     const speechSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
     const appSettings = await DB.getSettings();
@@ -603,7 +708,7 @@
       if (!confirm('Delete this review and its photos?')) return;
       await deleteReviewData(review);
       toast('Review deleted');
-      location.hash = `#/project/${review.projectId}`;
+      location.hash = backHash;
     };
 
     await renderSections();
