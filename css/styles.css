@@ -217,6 +217,19 @@ body {
 
 .actions { margin-top: 18px; }
 
+/* ---------- read-only review preview ---------- */
+.preview-actions {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.preview-actions .btn { flex: 1; min-width: 130px; }
+.preview-frame {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden;
+}
+.preview-frame iframe {
+  display: block; width: 100%; border: 0; min-height: 60vh;
+}
+
 /* ---------- toast ---------- */
 .toast {
   position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);

@@ -14,8 +14,10 @@ const Exporter = (() => {
     return `<tr><th>${esc(label)}</th><td>${esc(value)}</td></tr>`;
   }
 
-  /* photoUrls: Map photoId -> data URL */
-  function buildHtml({ project, review, settings, photoUrls }) {
+  /* photoUrls: Map photoId -> data URL
+   * embedded: true when shown inside the app's in-page preview iframe
+   *   (no print toolbar, white page background, full-width sheet). */
+  function buildHtml({ project, review, settings, photoUrls, embedded }) {
     const sectionsHtml = (review.sections || [])
       .map((sec, si) => {
         const bullets = String(sec.notes || '')
@@ -63,8 +65,9 @@ const Exporter = (() => {
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font: 13px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-         color: #16212e; background: #e9ecef; }
-  .sheet { max-width: 800px; margin: 0 auto; background: #fff; padding: 34px 40px; }
+         color: #16212e; background: ${embedded ? '#fff' : '#e9ecef'}; }
+  .sheet { max-width: 800px; margin: 0 auto; background: #fff;
+           padding: ${embedded ? '20px 20px 28px' : '34px 40px'}; }
   .doc-header { display: flex; justify-content: space-between; align-items: flex-start;
                 border-bottom: 3px solid #1d3557; padding-bottom: 12px; margin-bottom: 18px; }
   .doc-header h1 { font-size: 20px; color: #1d3557; letter-spacing: .04em; }
@@ -100,7 +103,7 @@ const Exporter = (() => {
 </style>
 </head>
 <body>
-<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
+${embedded ? '' : '<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>'}
 <div class="sheet">
   <div class="doc-header">
     <div>
@@ -154,9 +157,9 @@ const Exporter = (() => {
     return urls;
   }
 
-  async function makeDocument(project, review, settings) {
+  async function makeDocument(project, review, settings, opts) {
     const photoUrls = await collectPhotoUrls(review);
-    return buildHtml({ project, review, settings, photoUrls });
+    return buildHtml({ project, review, settings, photoUrls, embedded: !!(opts && opts.embedded) });
   }
 
   function filename(project, review) {
@@ -179,6 +182,10 @@ const Exporter = (() => {
       document.body.appendChild(a);
       a.click();
       a.remove();
+    },
+    /* HTML string for the in-app read-only preview (rendered inside an iframe). */
+    async previewHtml(project, review, settings) {
+      return makeDocument(project, review, settings, { embedded: true });
     },
     _buildHtml: buildHtml, // exposed for testing
   };

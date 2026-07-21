@@ -60,6 +60,7 @@
     try {
       if (parts[0] === 'projects' || parts[0] === '') await viewProjects();
       else if (parts[0] === 'reviews') await viewReviews();
+      else if (parts[0] === 'review-view') await viewReviewPreview(parts[1]);
       else if (parts[0] === 'project-edit') await viewProjectForm(parts[1]);
       else if (parts[0] === 'project') await viewProject(parts[1]);
       else if (parts[0] === 'review') await viewReview(parts[1], parts[2]);
@@ -224,7 +225,7 @@
           const projectName = project ? project.name : 'Unknown project';
           const status = project ? project.status : '';
           return `
-        <a class="card row-card" href="#/review/${r.id}/lib">
+        <a class="card row-card" href="#/review-view/${r.id}">
           <div class="row-main">
             <div class="row-title">${esc(r.title || 'Review')}</div>
             <div class="row-sub">${esc(projectName)}</div>
@@ -249,6 +250,53 @@
     });
 
     render();
+  }
+
+  /* ---------- review preview (read-only, PDF-style) ---------- */
+
+  async function viewReviewPreview(id) {
+    const review = await DB.get('reviews', id);
+    if (!review) { location.hash = '#/reviews'; return; }
+    const project = await DB.get('projects', review.projectId);
+    const settings = await DB.getSettings();
+    setHeader(project ? project.name : 'Review', '#/reviews');
+
+    view.innerHTML = `
+      <div class="preview-actions">
+        <button id="editReviewBtn" class="btn primary">&#9998; Edit review</button>
+        <button id="printBtn" class="btn">Print / Save as PDF</button>
+        <button id="dlBtn" class="btn">Download</button>
+      </div>
+      <div class="preview-frame">
+        <iframe id="previewFrame" title="Review form preview"></iframe>
+      </div>
+    `;
+
+    const frame = document.getElementById('previewFrame');
+    const html = await Exporter.previewHtml(project || { name: 'Project' }, review, settings);
+    // Auto-size the iframe to its content so the page scrolls naturally.
+    frame.onload = () => {
+      try {
+        const h = frame.contentDocument.documentElement.scrollHeight;
+        if (h) frame.style.height = h + 'px';
+      } catch (_) { /* cross-origin guard — not expected for srcdoc */ }
+    };
+    frame.srcdoc = html;
+    // Re-measure shortly after in case layout settles after first paint.
+    setTimeout(() => {
+      try {
+        const h = frame.contentDocument.documentElement.scrollHeight;
+        if (h) frame.style.height = h + 'px';
+      } catch (_) {}
+    }, 300);
+
+    document.getElementById('editReviewBtn').onclick = () => (location.hash = `#/review/${id}/view`);
+    document.getElementById('printBtn').onclick = () =>
+      Exporter.openPrintView(project || { name: 'Project' }, review, settings);
+    document.getElementById('dlBtn').onclick = async () => {
+      await Exporter.download(project || { name: 'Project' }, review, settings);
+      toast('Review form downloaded');
+    };
   }
 
   /* ---------- project create / edit ---------- */
@@ -413,8 +461,11 @@
     const review = await DB.get('reviews', id);
     if (!review) { location.hash = '#/projects'; return; }
     const project = await DB.get('projects', review.projectId);
-    // Return to the reviews library if opened from there, else the project.
-    const backHash = origin === 'lib' ? '#/reviews' : `#/project/${review.projectId}`;
+    // Return to wherever the editor was opened from.
+    const backHash =
+      origin === 'view' ? `#/review-view/${id}`
+      : origin === 'lib' ? '#/reviews'
+      : `#/project/${review.projectId}`;
     setHeader(project ? project.name : 'Review', backHash);
 
     const speechSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);

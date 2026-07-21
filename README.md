@@ -17,6 +17,7 @@ offline once loaded.
 | 🗂 Project database | Manually add projects (name, project aspect, reference, CAD name, CAD version, location, status, tags). Search and filter the list. |
 | 📋 Reviews with sections | Each review has metadata (title, date, one or more reviewers picked from the NPI team list — new people can be added on the fly) plus any number of sections (e.g. Progress, Budget, Quality, Risks), each with notes and photos. Sections can be reordered. |
 | 🗄 Saved reviews library | A **Saved reviews** tab on the home screen lists every review across all projects — searchable by project, title, reviewer, or date — so all saved reviews live in one browsable place, not just under each project. Reviews auto-save as you work and appear here automatically. |
+| 👁 PDF-style read view | Tapping a review in **Saved reviews** opens it as the finished, formatted review form (the same layout as the export) rather than the edit screen. An **Edit review** button jumps into the editor when you need to change it, and Print / Save as PDF and Download are right there too. |
 | 📄 Standardised export | One tap builds the review form: header, project/review metadata table, numbered sections with bullets and captioned photos, sign-off block. Print / Save as PDF, or download as an HTML file. |
 | 📱 Installable + offline | Add to Home Screen on your phone; the app shell is cached by a service worker. |
 
