@@ -46,6 +46,18 @@ const Exporter = (() => {
       })
       .join('');
 
+    const nextSteps = String(review.nextSteps || '')
+      .split('\n')
+      .map((l) => l.replace(/^[-•*]\s*/, '').trim())
+      .filter(Boolean);
+    const nextStepsHtml = `
+      <section class="review-section next-steps">
+        <h2>Next steps</h2>
+        ${nextSteps.length
+          ? `<ul>${nextSteps.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>`
+          : '<p class="none">None recorded.</p>'}
+      </section>`;
+
     const reviewerList = Array.isArray(review.reviewers)
       ? review.reviewers.filter(Boolean)
       : review.reviewer ? [review.reviewer] : [];
@@ -126,6 +138,8 @@ ${embedded ? '' : '<div class="toolbar"><button onclick="window.print()">Print /
   </table>
 
   ${sectionsHtml || '<p class="none">No review sections.</p>'}
+
+  ${nextStepsHtml}
 
   <div class="signoff">
     ${signoffHtml}

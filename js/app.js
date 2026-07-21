@@ -493,6 +493,17 @@
       <div id="sections"></div>
       <button id="addSectionBtn" class="btn block">+ Add section</button>
 
+      <h2 class="section-label">Next steps</h2>
+      <div class="card">
+        <textarea id="nextSteps" class="sec-notes" rows="4"
+          placeholder="Follow-up actions — one per line. Dictate below, then Tidy.">${esc(review.nextSteps || '')}</textarea>
+        <div class="dict-bar">
+          ${speechSupported ? '<button class="btn small mic-btn" id="nsMic">&#127908; Dictate</button>' : ''}
+          <button class="btn small" id="nsTidy">&#10024; Tidy into bullets</button>
+          <span class="interim muted small" id="nsInterim"></span>
+        </div>
+      </div>
+
       <div class="actions">
         <button id="exportBtn" class="btn primary block">Export review form (PDF / print)</button>
         <button id="downloadBtn" class="btn block">Download as HTML file</button>
@@ -515,6 +526,7 @@
       review.date = document.getElementById('rvDate').value;
       review.reviewers = reviewers.slice();
       delete review.reviewer; // superseded by the reviewers array
+      review.nextSteps = document.getElementById('nextSteps').value;
       review.sections = [...sectionsEl.querySelectorAll('.section-card')].map((el) => {
         const secId = el.dataset.id;
         const old = review.sections.find((s) => s.id === secId) || { photos: [] };
@@ -537,6 +549,75 @@
 
     document.getElementById('reviewMeta').addEventListener('input', scheduleSave);
     sectionsEl.addEventListener('input', scheduleSave);
+
+    /* Shared Dictate/Tidy wiring, used by review sections and the Next steps field.
+     * targetKey uniquely identifies the field being dictated into so only one
+     * mic records at a time. */
+    function wireDictation(micBtn, interimEl, notesEl, targetKey) {
+      if (!micBtn) return;
+      micBtn.onclick = () => {
+        if (dictationTarget === targetKey) {
+          stopDictation();
+          micBtn.classList.remove('recording');
+          micBtn.innerHTML = '&#127908; Dictate';
+          return;
+        }
+        stopDictation();
+        document.querySelectorAll('.mic-btn.recording').forEach((b) => {
+          b.classList.remove('recording');
+          b.innerHTML = '&#127908; Dictate';
+        });
+        dictationTarget = targetKey;
+        dictation = createDictation({
+          onFinal: (text) => {
+            notesEl.value = (notesEl.value.trim() ? notesEl.value.replace(/\s*$/, '') + '\n' : '') + text;
+            interimEl.textContent = '';
+            scheduleSave();
+          },
+          onInterim: (text) => { interimEl.textContent = text; },
+          onState: (active) => {
+            micBtn.classList.toggle('recording', active);
+            micBtn.innerHTML = active ? '&#9632; Stop' : '&#127908; Dictate';
+            if (!active) interimEl.textContent = '';
+          },
+          onError: (msg) => toast(msg),
+        });
+        if (dictation) dictation.start();
+      };
+    }
+
+    function wireTidy(tidyBtn, notesEl) {
+      tidyBtn.onclick = async (e) => {
+        const btn = e.currentTarget;
+        const raw = notesEl.value.trim();
+        if (!raw) { toast('Nothing to tidy yet'); return; }
+        const settings = await DB.getSettings();
+        let bullets;
+        if (settings.aiEnabled && settings.apiKey) {
+          btn.disabled = true;
+          btn.textContent = 'Tidying…';
+          try {
+            bullets = await Tidy.ai(raw, settings.apiKey);
+          } catch (err) {
+            toast('AI tidy failed (' + err.message + ') — used offline tidy instead');
+            bullets = Tidy.local(raw);
+          }
+          btn.disabled = false;
+          btn.innerHTML = '&#10024; Tidy into bullets';
+        } else {
+          bullets = Tidy.local(raw);
+        }
+        if (!bullets.length) { toast('Nothing usable found'); return; }
+        notesEl.value = bullets.join('\n');
+        scheduleSave();
+      };
+    }
+
+    /* Next steps field: same Dictate/Tidy affordances as sections. */
+    const nextStepsEl = document.getElementById('nextSteps');
+    nextStepsEl.addEventListener('input', scheduleSave);
+    wireDictation(document.getElementById('nsMic'), document.getElementById('nsInterim'), nextStepsEl, '__nextsteps__');
+    wireTidy(document.getElementById('nsTidy'), nextStepsEl);
 
     /* "Reviewed by" — multiple reviewers as chips, plus NPI team + add-new-person */
     const reviewerChips = document.getElementById('reviewerChips');
@@ -640,61 +721,10 @@
         if (el.nextElementSibling) { el.parentNode.insertBefore(el.nextElementSibling, el); await save(); }
       };
 
-      /* dictation */
-      const micBtn = el.querySelector('.mic-btn');
-      const interimEl = el.querySelector('.interim');
+      /* dictation + tidy (shared helpers) */
       const notesEl = el.querySelector('.sec-notes');
-      if (micBtn) {
-        micBtn.onclick = () => {
-          if (dictationTarget === sec.id) { stopDictation(); micBtn.classList.remove('recording'); micBtn.innerHTML = '&#127908; Dictate'; return; }
-          stopDictation();
-          document.querySelectorAll('.mic-btn.recording').forEach((b) => {
-            b.classList.remove('recording'); b.innerHTML = '&#127908; Dictate';
-          });
-          dictationTarget = sec.id;
-          dictation = createDictation({
-            onFinal: (text) => {
-              notesEl.value = (notesEl.value.trim() ? notesEl.value.replace(/\s*$/, '') + '\n' : '') + text;
-              interimEl.textContent = '';
-              scheduleSave();
-            },
-            onInterim: (text) => { interimEl.textContent = text; },
-            onState: (active) => {
-              micBtn.classList.toggle('recording', active);
-              micBtn.innerHTML = active ? '&#9632; Stop' : '&#127908; Dictate';
-              if (!active) interimEl.textContent = '';
-            },
-            onError: (msg) => toast(msg),
-          });
-          if (dictation) dictation.start();
-        };
-      }
-
-      /* tidy */
-      el.querySelector('.tidy-btn').onclick = async (e) => {
-        const btn = e.currentTarget;
-        const raw = notesEl.value.trim();
-        if (!raw) { toast('Nothing to tidy yet'); return; }
-        const settings = await DB.getSettings();
-        let bullets;
-        if (settings.aiEnabled && settings.apiKey) {
-          btn.disabled = true;
-          btn.textContent = 'Tidying…';
-          try {
-            bullets = await Tidy.ai(raw, settings.apiKey);
-          } catch (err) {
-            toast('AI tidy failed (' + err.message + ') — used offline tidy instead');
-            bullets = Tidy.local(raw);
-          }
-          btn.disabled = false;
-          btn.innerHTML = '&#10024; Tidy into bullets';
-        } else {
-          bullets = Tidy.local(raw);
-        }
-        if (!bullets.length) { toast('Nothing usable found'); return; }
-        notesEl.value = bullets.join('\n');
-        scheduleSave();
-      };
+      wireDictation(el.querySelector('.mic-btn'), el.querySelector('.interim'), notesEl, sec.id);
+      wireTidy(el.querySelector('.tidy-btn'), notesEl);
 
       /* photos */
       el.querySelector('.photo-add input').addEventListener('change', async (e) => {
