@@ -12,15 +12,15 @@ offline once loaded.
 | Feature | How it works |
 |---|---|
 | 📷 Camera capture | "Add photo" opens your phone's camera directly; photos land straight in the review section and appear in the exported form (auto-downscaled to keep storage light). Captions supported. |
-| 🎤 Dictation | Per-section mic button converts speech to text live (Web Speech API). Say "new point" / "full stop" to structure as you speak. |
-| ✨ Tidy | One tap turns raw dictation into concise bullet points. Two modes: built-in **offline tidy** (removes filler words, splits into points), or optional **AI tidy** powered by Claude (bring your own Anthropic API key in Settings). |
+| 🎤 Dictation | Per-section (and Next steps) mic button converts speech to text live (Web Speech API) as one continuous stream — words flow into the field rather than one line per word. Say "new point" / "full stop" to structure as you speak. |
+| ✨ Tidy | One tap turns raw dictation into concise **bullet points** (each line prefixed with •). Two modes: built-in **offline tidy** (removes filler words, splits into points), or optional **AI tidy** powered by Claude (bring your own Anthropic API key in Settings). |
 | 🗂 Project database | Manually add projects (name, project aspect, reference, CAD name, CAD version, location, status, tags). Search and filter the list. |
 | 📋 Reviews with sections | Each review has metadata (title, date, one or more reviewers picked from the NPI team list — new people can be added on the fly) plus any number of sections (e.g. Progress, Budget, Quality, Risks), each with notes and photos. Sections can be reordered. |
 | ✅ Next steps | A dedicated **Next steps** field on every review captures follow-up actions (one per line, with the same Dictate and Tidy buttons as the sections). It prints as its own section on the review form, after the sections and before the sign-off. |
 | 🗄 Saved reviews library | A **Saved reviews** tab on the home screen lists every review across all projects — searchable by project, title, reviewer, or date — so all saved reviews live in one browsable place, not just under each project. Reviews auto-save as you work and appear here automatically. |
 | 👁 PDF-style read view | Tapping a review in **Saved reviews** opens it as the finished, formatted review form (the same layout as the export) rather than the edit screen. An **Edit review** button jumps into the editor when you need to change it, and Print / Save as PDF and Download are right there too. |
 | 📄 Standardised export | One tap builds the review form: header, project/review metadata table, numbered sections with bullets and captioned photos, sign-off block. Print / Save as PDF, or download as an HTML file. |
-| 📱 Installable + offline | Add to Home Screen on your phone; the app shell is cached by a service worker. |
+| 📱 Installable + offline | Add to Home Screen on your phone; the app shell is cached by a service worker. **Settings** shows the app's own link with Copy / Open buttons for sharing or installing on another device. |
 
 ## Getting it on your phone & PC
 

@@ -19,12 +19,15 @@ const Tidy = (() => {
   // Leading conversational lead-ins to drop from the start of a point.
   const LEAD_INS = /^(and|so|then|also|ok(ay)?|right|well|next)\b[\s,]*/i;
 
+  const BULLET = '• ';
+
   function cleanPoint(raw) {
     let t = raw
       .replace(FILLERS, ' ')
       .replace(/\s+([.,;:!?])/g, '$1')
       .replace(/\s{2,}/g, ' ')
       .trim();
+    t = t.replace(/^[-•*]+\s*/, ''); // drop any existing bullet marker (re-tidy)
     t = t.replace(LEAD_INS, '');
     t = t.replace(/[.,;:\s]+$/g, '');
     if (!t) return '';
@@ -42,7 +45,7 @@ const Tidy = (() => {
         if (p.length > 1 && p !== points[points.length - 1]) points.push(p);
       }
     }
-    return points;
+    return points.map((p) => BULLET + p);
   }
 
   const SYSTEM_PROMPT = [
@@ -85,7 +88,8 @@ const Tidy = (() => {
     return out
       .split('\n')
       .map((l) => l.replace(/^[-•*]\s*/, '').trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((l) => BULLET + l);
   }
 
   return { local, ai };

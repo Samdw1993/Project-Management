@@ -163,6 +163,15 @@ body {
 .form .check input { width: 20px; height: 20px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .settings-sub { font-size: 15px; margin: 6px 0 6px; color: var(--navy); }
+.app-link {
+  display: block; word-break: break-all;
+  font-size: 14px; color: var(--navy-2); font-weight: 600;
+  padding: 10px 12px; margin-bottom: 10px;
+  background: #f1f4f7; border: 1px solid var(--line); border-radius: 9px;
+  text-decoration: none;
+}
+.link-actions { display: flex; gap: 8px; }
+.link-actions .btn { flex: 1; text-decoration: none; }
 
 .form .field { margin-bottom: 12px; }
 .form .field-label { display: block; font-size: 13.5px; font-weight: 600; color: #33465c; margin-bottom: 6px; }

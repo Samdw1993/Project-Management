@@ -2,6 +2,10 @@
  * Best support: Chrome (Android/desktop) and Edge. iOS Safari 14.5+ has partial
  * support; on unsupported browsers the mic button is hidden and the keyboard's
  * built-in dictation still works into any text field.
+ *
+ * Emits a single running transcript (onTranscript) rather than one event per
+ * word, so the caller can render dictation as one continuous, non-duplicated
+ * stream instead of a new line per word.
  */
 function createDictation(handlers) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -9,25 +13,28 @@ function createDictation(handlers) {
 
   let rec = null;
   let wantActive = false;
+  let committedFinal = ''; // finalized text carried across auto-restarts
+  let instanceFinal = '';  // finalized text within the current recognition instance
 
   function build() {
     rec = new SR();
     rec.continuous = true;
     rec.interimResults = true;
     rec.lang = navigator.language || 'en-GB';
+    instanceFinal = '';
 
     rec.onresult = (e) => {
+      // Recompute the whole transcript for this instance every event — this is
+      // idempotent, so a result that fires more than once can't be duplicated.
       let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const res = e.results[i];
-        if (res.isFinal) {
-          const text = res[0].transcript.trim();
-          if (text) handlers.onFinal(text);
-        } else {
-          interim += res[0].transcript;
-        }
+      let finalNow = '';
+      for (let i = 0; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalNow += r[0].transcript + ' ';
+        else interim += r[0].transcript + ' ';
       }
-      handlers.onInterim(interim.trim());
+      instanceFinal = finalNow;
+      handlers.onTranscript(committedFinal + instanceFinal, interim);
     };
 
     rec.onerror = (e) => {
@@ -36,11 +43,14 @@ function createDictation(handlers) {
         handlers.onState(false);
         handlers.onError('Microphone access was blocked. Allow it in your browser settings.');
       }
-      // 'no-speech' and 'aborted' are routine; onend handles the restart.
+      // 'no-speech' / 'aborted' are routine; onend handles the restart.
     };
 
-    // Mobile browsers stop recognition after a pause — restart while active.
+    // Mobile browsers stop recognition after a pause — restart while active,
+    // preserving everything finalized so far.
     rec.onend = () => {
+      committedFinal += instanceFinal;
+      instanceFinal = '';
       if (wantActive) {
         try { rec.start(); } catch (_) { /* already starting */ }
       } else {
@@ -52,6 +62,8 @@ function createDictation(handlers) {
   return {
     start() {
       wantActive = true;
+      committedFinal = '';
+      instanceFinal = '';
       build();
       try {
         rec.start();
@@ -63,7 +75,6 @@ function createDictation(handlers) {
     },
     stop() {
       wantActive = false;
-      handlers.onInterim('');
       try { rec.stop(); } catch (_) { /* not running */ }
     },
     get active() {

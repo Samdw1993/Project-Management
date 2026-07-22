@@ -1,5 +1,5 @@
 /* Service worker: caches the app shell so the app works offline once visited. */
-const CACHE = 'project-review-v5';
+const CACHE = 'project-review-v6';
 const ASSETS = [
   './',
   './index.html',

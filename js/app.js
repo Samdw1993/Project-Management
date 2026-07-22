@@ -568,13 +568,18 @@
           b.innerHTML = '&#127908; Dictate';
         });
         dictationTarget = targetKey;
+        // Whatever is already in the field; dictation is appended to it as one
+        // continuous stream (spaces, not a new line per word).
+        const base = notesEl.value;
         dictation = createDictation({
-          onFinal: (text) => {
-            notesEl.value = (notesEl.value.trim() ? notesEl.value.replace(/\s*$/, '') + '\n' : '') + text;
-            interimEl.textContent = '';
+          onTranscript: (finalized, interim) => {
+            const dictated = (finalized + interim).replace(/\s+/g, ' ').trim();
+            notesEl.value = base
+              ? base.replace(/\s*$/, '') + (dictated ? ' ' + dictated : '')
+              : dictated;
+            interimEl.textContent = interim.replace(/\s+/g, ' ').trim();
             scheduleSave();
           },
-          onInterim: (text) => { interimEl.textContent = text; },
           onState: (active) => {
             micBtn.classList.toggle('recording', active);
             micBtn.innerHTML = active ? '&#9632; Stop' : '&#127908; Dictate';
@@ -817,6 +822,9 @@
     setHeader('Settings', '#/projects');
     const s = await DB.getSettings();
 
+    // This app's own URL (without the in-app #route) — for sharing / installing elsewhere.
+    const appUrl = location.origin + location.pathname;
+
     view.innerHTML = `
       <form id="settingsForm" class="card form">
         <label>Your name (default reviewer)<input name="reviewer" value="${esc(s.reviewer)}"></label>
@@ -831,9 +839,35 @@
 
         <button class="btn primary block" type="submit">Save settings</button>
       </form>
+
+      <div class="card">
+        <h3 class="settings-sub" style="margin-top:0">App link</h3>
+        <p class="muted small">Open this app on another device, or share it with a colleague.</p>
+        <a class="app-link" id="appLink" href="${esc(appUrl)}" target="_blank" rel="noopener">${esc(appUrl)}</a>
+        <div class="link-actions">
+          <button type="button" class="btn small" id="copyLinkBtn">Copy link</button>
+          <a class="btn small" href="${esc(appUrl)}" target="_blank" rel="noopener">Open in new tab</a>
+        </div>
+      </div>
+
       <p class="muted small center">All data is stored locally on this device.<br>
       Install this app: browser menu &rarr; “Add to Home Screen”.</p>
     `;
+
+    document.getElementById('copyLinkBtn').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(appUrl);
+        toast('Link copied');
+      } catch (_) {
+        // Clipboard API unavailable (e.g. non-secure context) — select the text instead.
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById('appLink'));
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        toast('Copy the highlighted link');
+      }
+    };
 
     document.getElementById('settingsForm').onsubmit = async (e) => {
       e.preventDefault();
