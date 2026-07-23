@@ -1,5 +1,5 @@
 /* Service worker: caches the app shell so the app works offline once visited. */
-const CACHE = 'project-review-v6';
+const CACHE = 'project-review-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './js/db.js',
   './js/tidy.js',
   './js/dictation.js',
+  './js/photoedit.js',
   './js/export.js',
   './js/app.js',
   './manifest.webmanifest',

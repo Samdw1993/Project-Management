@@ -50,12 +50,22 @@ const Exporter = (() => {
       .split('\n')
       .map((l) => l.replace(/^[-•*]\s*/, '').trim())
       .filter(Boolean);
+    const nextStepsPhotos = (review.nextStepsPhotos || [])
+      .map((p, pi) => {
+        const url = photoUrls.get(p.id);
+        if (!url) return '';
+        const label = `Photo N.${pi + 1}`;
+        const caption = p.caption ? ` — ${esc(p.caption)}` : '';
+        return `<figure><img src="${url}" alt="${esc(label)}"><figcaption>${label}${caption}</figcaption></figure>`;
+      })
+      .join('');
     const nextStepsHtml = `
       <section class="review-section next-steps">
         <h2>Next steps</h2>
         ${nextSteps.length
           ? `<ul>${nextSteps.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>`
           : '<p class="none">None recorded.</p>'}
+        ${nextStepsPhotos ? `<div class="photo-grid">${nextStepsPhotos}</div>` : ''}
       </section>`;
 
     const reviewerList = Array.isArray(review.reviewers)
@@ -162,11 +172,14 @@ ${embedded ? '' : '<div class="toolbar"><button onclick="window.print()">Print /
 
   async function collectPhotoUrls(review) {
     const urls = new Map();
-    for (const sec of review.sections || []) {
-      for (const p of sec.photos || []) {
-        const rec = await DB.get('photos', p.id);
-        if (rec && rec.blob) urls.set(p.id, await blobToDataUrl(rec.blob));
-      }
+    const refs = [];
+    for (const sec of review.sections || []) for (const p of sec.photos || []) refs.push(p);
+    for (const p of review.nextStepsPhotos || []) refs.push(p);
+    for (const p of refs) {
+      const rec = await DB.get('photos', p.id);
+      // Prefer the flattened annotated image so sketches show on the form.
+      const blob = rec && (rec.annotatedBlob || rec.blob);
+      if (blob) urls.set(p.id, await blobToDataUrl(blob));
     }
     return urls;
   }

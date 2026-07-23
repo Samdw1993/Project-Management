@@ -11,7 +11,8 @@ offline once loaded.
 
 | Feature | How it works |
 |---|---|
-| 📷 Camera capture | "Add photo" opens your phone's camera directly; photos land straight in the review section and appear in the exported form (auto-downscaled to keep storage light). Captions supported. |
+| 📷 Camera capture | "Add photo" opens your phone's camera directly; photos land straight in the review section **and the Next steps stage**, and appear in the exported form (auto-downscaled to keep storage light). Captions supported. |
+| ✏️ Photo annotation | Tap the pencil on any photo to sketch over it — freehand pen, straight lines and arrows, in several colours, with undo/clear. Annotations are stored as re-editable strokes (the original photo is preserved) and the marked-up image appears on the review form. |
 | 🎤 Dictation | Per-section (and Next steps) mic button converts speech to text live (Web Speech API) as one continuous stream — words flow into the field rather than one line per word. Say "new point" / "full stop" to structure as you speak. |
 | ✨ Tidy | One tap turns raw dictation into concise **bullet points** (each line prefixed with •). Two modes: built-in **offline tidy** (removes filler words, splits into points), or optional **AI tidy** powered by Claude (bring your own Anthropic API key in Settings). |
 | 🗂 Project database | Manually add projects (name, project aspect, reference, CAD name, CAD version, location, status, tags). Search and filter the list. |

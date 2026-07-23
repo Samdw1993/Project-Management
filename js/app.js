@@ -366,6 +366,7 @@
     for (const sec of review.sections || []) {
       for (const ph of sec.photos || []) await DB.delete('photos', ph.id);
     }
+    for (const ph of review.nextStepsPhotos || []) await DB.delete('photos', ph.id);
     await DB.delete('reviews', review.id);
   }
 
@@ -494,7 +495,7 @@
       <button id="addSectionBtn" class="btn block">+ Add section</button>
 
       <h2 class="section-label">Next steps</h2>
-      <div class="card">
+      <div class="card" id="nextStepsCard">
         <textarea id="nextSteps" class="sec-notes" rows="4"
           placeholder="Follow-up actions — one per line. Dictate below, then Tidy.">${esc(review.nextSteps || '')}</textarea>
         <div class="dict-bar">
@@ -502,6 +503,10 @@
           <button class="btn small" id="nsTidy">&#10024; Tidy into bullets</button>
           <span class="interim muted small" id="nsInterim"></span>
         </div>
+        <div class="photo-row" id="nsPhotoRow"></div>
+        <label class="btn small photo-add">&#128247; Add photo
+          <input type="file" accept="image/*" capture="environment" multiple hidden>
+        </label>
       </div>
 
       <div class="actions">
@@ -527,6 +532,13 @@
       review.reviewers = reviewers.slice();
       delete review.reviewer; // superseded by the reviewers array
       review.nextSteps = document.getElementById('nextSteps').value;
+      const nsRow = document.getElementById('nsPhotoRow');
+      review.nextStepsPhotos = nsRow
+        ? [...nsRow.querySelectorAll('.photo-thumb')].map((t) => ({
+            id: t.dataset.photoId,
+            caption: t.querySelector('.photo-caption').value,
+          }))
+        : review.nextStepsPhotos || [];
       review.sections = [...sectionsEl.querySelectorAll('.section-card')].map((el) => {
         const secId = el.dataset.id;
         const old = review.sections.find((s) => s.id === secId) || { photos: [] };
@@ -675,6 +687,76 @@
     renderReviewerChips();
     renderReviewerAddSelect();
 
+    /* --- shared photo handling (sections + next steps) --- */
+
+    const displayBlob = (rec) => rec.annotatedBlob || rec.blob;
+
+    async function openAnnotator(rec, imgEl) {
+      const result = await PhotoEditor.open(rec.blob, rec.annotations || []);
+      if (!result) return; // cancelled
+      rec.annotations = result.annotations;
+      if (result.annotatedBlob) rec.annotatedBlob = result.annotatedBlob;
+      else delete rec.annotatedBlob;
+      await DB.put('photos', rec);
+      imgEl.src = URL.createObjectURL(displayBlob(rec));
+      await save();
+      toast(result.annotations.length ? 'Annotations saved' : 'Annotations cleared');
+    }
+
+    function buildPhotoThumb(rec, caption) {
+      const t = document.createElement('div');
+      t.className = 'photo-thumb';
+      t.dataset.photoId = rec.id;
+      t.innerHTML = `
+        <img src="${URL.createObjectURL(displayBlob(rec))}" alt="Review photo">
+        <div class="thumb-btns">
+          <button class="thumb-edit" title="Annotate photo">&#9998;</button>
+          <button class="thumb-del" title="Remove photo">&#10005;</button>
+        </div>
+        <input class="photo-caption" placeholder="Caption…" value="${esc(caption || '')}">
+      `;
+      t.querySelector('.thumb-edit').onclick = () => openAnnotator(rec, t.querySelector('img'));
+      t.querySelector('.thumb-del').onclick = async () => {
+        if (!confirm('Remove this photo?')) return;
+        await DB.delete('photos', rec.id);
+        t.remove();
+        await save();
+      };
+      return t;
+    }
+
+    async function loadPhotoThumbs(photoRow, refs) {
+      for (const ph of refs || []) {
+        const rec = await DB.get('photos', ph.id);
+        if (rec) photoRow.appendChild(buildPhotoThumb(rec, ph.caption));
+      }
+    }
+
+    function wirePhotoAdd(inputEl, photoRow) {
+      if (!inputEl) return;
+      inputEl.addEventListener('change', async (e) => {
+        const files = [...e.target.files];
+        e.target.value = '';
+        for (const file of files) {
+          try {
+            const blob = await downscalePhoto(file);
+            const rec = { id: uid(), blob, annotations: [], createdAt: Date.now() };
+            await DB.put('photos', rec);
+            photoRow.appendChild(buildPhotoThumb(rec, ''));
+          } catch (err) {
+            console.error(err);
+            toast('Could not add that photo');
+          }
+        }
+        await save();
+      });
+    }
+
+    /* Next steps photos */
+    const nsPhotoRow = document.getElementById('nsPhotoRow');
+    await loadPhotoThumbs(nsPhotoRow, review.nextStepsPhotos || []);
+    wirePhotoAdd(document.querySelector('#nextStepsCard .photo-add input'), nsPhotoRow);
+
     /* --- section rendering --- */
     async function renderSections() {
       sectionsEl.innerHTML = '';
@@ -706,10 +788,7 @@
       `;
 
       const photoRow = el.querySelector('.photo-row');
-      for (const ph of sec.photos || []) {
-        const rec = await DB.get('photos', ph.id);
-        if (rec) photoRow.appendChild(buildThumb(ph.id, rec.blob, ph.caption));
-      }
+      await loadPhotoThumbs(photoRow, sec.photos);
 
       /* section controls */
       el.querySelector('.sec-del').onclick = async () => {
@@ -731,42 +810,8 @@
       wireDictation(el.querySelector('.mic-btn'), el.querySelector('.interim'), notesEl, sec.id);
       wireTidy(el.querySelector('.tidy-btn'), notesEl);
 
-      /* photos */
-      el.querySelector('.photo-add input').addEventListener('change', async (e) => {
-        const files = [...e.target.files];
-        e.target.value = '';
-        for (const file of files) {
-          try {
-            const blob = await downscalePhoto(file);
-            const photoId = uid();
-            await DB.put('photos', { id: photoId, blob, createdAt: Date.now() });
-            photoRow.appendChild(buildThumb(photoId, blob, ''));
-          } catch (err) {
-            console.error(err);
-            toast('Could not add that photo');
-          }
-        }
-        await save();
-      });
-
-      function buildThumb(photoId, blob, caption) {
-        const t = document.createElement('div');
-        t.className = 'photo-thumb';
-        t.dataset.photoId = photoId;
-        const url = URL.createObjectURL(blob);
-        t.innerHTML = `
-          <img src="${url}" alt="Review photo">
-          <button class="thumb-del" title="Remove photo">&#10005;</button>
-          <input class="photo-caption" placeholder="Caption…" value="${esc(caption || '')}">
-        `;
-        t.querySelector('.thumb-del').onclick = async () => {
-          if (!confirm('Remove this photo?')) return;
-          await DB.delete('photos', photoId);
-          t.remove();
-          await save();
-        };
-        return t;
-      }
+      /* photos (shared helper) */
+      wirePhotoAdd(el.querySelector('.photo-add input'), photoRow);
 
       return el;
     }
