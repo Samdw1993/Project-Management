@@ -1,3 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1d3557">
+  <meta name="description" content="Standardised project review capture and export — camera, dictation, tidy notes.">
+  <title>Project Review</title>
+  <!-- Standalone build: all CSS/JS inlined. Regenerate with build-standalone.py -->
+  <style>
+/* Project Review — mobile-first styles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy: #1d3557;
+  --navy-2: #2b4a75;
+  --accent: #e63946;
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --ink: #16212e;
+  --muted: #6b7a89;
+  --line: #d9e0e7;
+  --green: #2a9d8f;
+  --amber: #e9a13b;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font: 16px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.center { text-align: center; }
+
+/* ---------- header ---------- */
+.app-header {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--navy); color: #fff;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 12px;
+}
+.app-header h1 {
+  flex: 1; font-size: 18px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.icon-btn {
+  font: inherit; font-size: 18px; line-height: 1;
+  background: none; border: 0; color: inherit; cursor: pointer;
+  padding: 6px 8px; border-radius: 8px;
+}
+.app-header .icon-btn:active { background: rgba(255, 255, 255, 0.15); }
+
+/* ---------- layout ---------- */
+.view {
+  max-width: 760px; margin: 0 auto;
+  padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 40px);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+
+.section-label {
+  font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); margin: 18px 2px 8px;
+}
+
+.empty {
+  text-align: center; color: var(--muted);
+  padding: 30px 10px; background: var(--card);
+  border: 1px dashed var(--line); border-radius: 12px; margin-bottom: 12px;
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  font: inherit; font-size: 15px; font-weight: 600;
+  background: #fff; color: var(--navy);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 11px 16px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn:active { transform: scale(0.99); }
+.btn.primary { background: var(--navy); border-color: var(--navy); color: #fff; }
+.btn.danger { background: #fff; border-color: #e5b4b8; color: var(--accent); }
+.btn.small { padding: 7px 12px; font-size: 13.5px; border-radius: 8px; }
+.btn.block { display: flex; width: 100%; margin-bottom: 10px; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+
+.mic-btn.recording {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  animation: pulse 1.4s infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.35); }
+  50% { box-shadow: 0 0 0 8px rgba(230, 57, 70, 0); }
+}
+
+/* ---------- toolbar / chips ---------- */
+.toolbar { margin-bottom: 12px; }
+.toolbar input[type="search"] {
+  width: 100%; font: inherit; padding: 11px 14px;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  margin-bottom: 8px;
+}
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  font: inherit; font-size: 13px; font-weight: 600;
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; color: var(--muted);
+  cursor: pointer;
+}
+.chip.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* ---------- home tabs (Projects / Saved reviews) ---------- */
+.tabs {
+  display: flex; gap: 4px; padding: 4px;
+  background: #e3e8ee; border-radius: 12px; margin-bottom: 14px;
+}
+.tab {
+  flex: 1; text-align: center; text-decoration: none;
+  font-size: 14.5px; font-weight: 650; color: var(--muted);
+  padding: 9px 8px; border-radius: 9px;
+}
+.tab.active { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(22, 33, 46, 0.12); }
+
+/* ---------- list rows ---------- */
+.list { margin-bottom: 4px; }
+.row-card {
+  display: flex; gap: 10px; align-items: center;
+  text-decoration: none; color: inherit;
+}
+.row-card:active { background: #f7f9fb; }
+.row-main { flex: 1; min-width: 0; }
+.row-title { font-weight: 650; margin-bottom: 1px; }
+.row-sub { font-size: 13.5px; color: #43556a; }
+.row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.chev { color: var(--muted); font-size: 22px; }
+
+.pill {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+}
+.pill-active { background: #e3f3f1; color: var(--green); }
+.pill-onhold { background: #fbf0dd; color: #a86d14; }
+.pill-complete { background: #e7ebf1; color: #4b5c72; }
+
+.kv { display: flex; gap: 10px; padding: 4px 0; font-size: 14.5px; }
+.kv span { color: var(--muted); min-width: 92px; }
+.kv strong { font-weight: 500; }
+
+/* ---------- forms ---------- */
+.form label { display: block; font-size: 13.5px; font-weight: 600; color: #33465c; margin-bottom: 12px; }
+.form input:not([type="checkbox"]), .form select, .form textarea {
+  display: block; width: 100%; font: inherit; font-size: 16px;
+  margin-top: 4px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 9px; background: #fff;
+}
+.form input:focus, .form select:focus, .form textarea:focus,
+.sec-title:focus, .sec-notes:focus {
+  outline: 2px solid var(--navy-2); outline-offset: 0;
+}
+.form .check { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.form .check input { width: 20px; height: 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.settings-sub { font-size: 15px; margin: 6px 0 6px; color: var(--navy); }
+.app-link {
+  display: block; word-break: break-all;
+  font-size: 14px; color: var(--navy-2); font-weight: 600;
+  padding: 10px 12px; margin-bottom: 10px;
+  background: #f1f4f7; border: 1px solid var(--line); border-radius: 9px;
+  text-decoration: none;
+}
+.link-actions { display: flex; gap: 8px; }
+.link-actions .btn { flex: 1; text-decoration: none; }
+
+.form .field { margin-bottom: 12px; }
+.form .field-label { display: block; font-size: 13.5px; font-weight: 600; color: #33465c; margin-bottom: 6px; }
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 26px; }
+.reviewer-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--navy); border-color: var(--navy); color: #fff;
+  cursor: default;
+}
+.chip-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%; padding: 0;
+  border: 0; background: rgba(255, 255, 255, 0.25); color: #fff;
+  font-size: 10px; line-height: 1; cursor: pointer;
+}
+
+/* ---------- review sections ---------- */
+.section-head { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+.sec-title {
+  flex: 1; font: inherit; font-size: 16px; font-weight: 650;
+  border: 0; border-bottom: 2px solid var(--line);
+  padding: 6px 2px; background: transparent; min-width: 0;
+}
+.section-head .icon-btn { color: var(--muted); font-size: 15px; }
+.sec-notes {
+  width: 100%; font: inherit; font-size: 15px;
+  border: 1px solid var(--line); border-radius: 9px;
+  padding: 10px 12px; resize: vertical; min-height: 90px;
+}
+.dict-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 10px; }
+.interim { font-style: italic; flex: 1; min-width: 120px; }
+
+.photo-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.photo-thumb { position: relative; width: 132px; }
+.photo-thumb img {
+  width: 132px; height: 100px; object-fit: cover;
+  border-radius: 8px; border: 1px solid var(--line); display: block;
+}
+.photo-thumb .thumb-btns {
+  position: absolute; top: 4px; right: 4px; display: flex; gap: 4px;
+}
+.photo-thumb .thumb-btns button {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 0; background: rgba(22, 33, 46, 0.75); color: #fff;
+  font-size: 12px; cursor: pointer; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.photo-thumb .thumb-edit { background: rgba(29, 53, 87, 0.85); }
+.photo-caption {
+  width: 100%; font: inherit; font-size: 12px;
+  border: 0; border-bottom: 1px solid var(--line);
+  padding: 4px 2px; margin-top: 2px; background: transparent;
+}
+.photo-add { margin-bottom: 4px; }
+.photo-add input { display: none; }
+
+.actions { margin-top: 18px; }
+
+/* ---------- read-only review preview ---------- */
+.preview-actions {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.preview-actions .btn { flex: 1; min-width: 130px; }
+.preview-frame {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden;
+}
+.preview-frame iframe {
+  display: block; width: 100%; border: 0; min-height: 60vh;
+}
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  transform: translateX(-50%);
+  background: var(--ink); color: #fff;
+  font-size: 14px; padding: 10px 18px; border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 50; max-width: 90vw; text-align: center;
+}
+
+@media (min-width: 700px) {
+  .view { padding-top: 20px; }
+  .photo-thumb { width: 160px; }
+  .photo-thumb img { width: 160px; height: 120px; }
+}
+
+/* ---------- photo annotation editor ---------- */
+.pe-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: #10151c; color: #fff;
+  display: flex; flex-direction: column;
+}
+.pe-toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+  background: #1d2530;
+}
+.pe-toolbar.pe-bottom {
+  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  justify-content: space-between; flex-wrap: wrap;
+}
+.pe-top .pe-title { flex: 1; text-align: center; font-weight: 600; }
+.pe-btn {
+  font: inherit; font-size: 14px; font-weight: 600;
+  background: #2c3947; color: #fff; border: 0; border-radius: 8px;
+  padding: 9px 14px; cursor: pointer;
+}
+.pe-btn.pe-primary { background: var(--accent); }
+.pe-stage {
+  flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+  padding: 8px; overflow: hidden;
+}
+.pe-canvas { touch-action: none; background: #000; border-radius: 4px; }
+.pe-tools { display: flex; gap: 6px; }
+.pe-tool {
+  width: 42px; height: 40px; font-size: 18px; line-height: 1;
+  background: #2c3947; color: #fff; border: 2px solid transparent; border-radius: 8px;
+  cursor: pointer;
+}
+.pe-tool.active { border-color: #fff; background: #3a4a5c; }
+.pe-colors { display: flex; gap: 6px; }
+.pe-color {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4); cursor: pointer;
+}
+.pe-color.active { border-color: #fff; box-shadow: 0 0 0 2px #10151c, 0 0 0 4px #fff; }
+
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <button id="backBtn" class="icon-btn hidden" aria-label="Back">&#8592;</button>
+    <h1 id="screenTitle">Projects</h1>
+    <button id="settingsBtn" class="icon-btn" aria-label="Settings">&#9881;</button>
+  </header>
+
+  <main id="view" class="view"></main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+/* IndexedDB wrapper — all app data lives on the device. */
+const DB = (() => {
+  const NAME = 'project-review-db';
+  const VERSION = 1;
+  let dbPromise = null;
+
+  function open() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(NAME, VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('projects')) {
+          db.createObjectStore('projects', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('reviews')) {
+          const s = db.createObjectStore('reviews', { keyPath: 'id' });
+          s.createIndex('projectId', 'projectId', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('photos')) {
+          db.createObjectStore('photos', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings', { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  function reqToPromise(req) {
+    return new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function store(name, mode) {
+    const db = await open();
+    return db.transaction(name, mode).objectStore(name);
+  }
+
+  return {
+    async put(name, value) {
+      return reqToPromise((await store(name, 'readwrite')).put(value));
+    },
+    async get(name, key) {
+      return reqToPromise((await store(name, 'readonly')).get(key));
+    },
+    async getAll(name) {
+      return reqToPromise((await store(name, 'readonly')).getAll());
+    },
+    async delete(name, key) {
+      return reqToPromise((await store(name, 'readwrite')).delete(key));
+    },
+    async byIndex(name, indexName, value) {
+      const s = await store(name, 'readonly');
+      return reqToPromise(s.index(indexName).getAll(value));
+    },
+
+    /* App settings stored under a single record. */
+    async getSettings() {
+      const rec = await this.get('settings', 'app');
+      return Object.assign(
+        {
+          reviewer: '',
+          company: '',
+          aiEnabled: false,
+          apiKey: '',
+          people: ['Fred Marsh', 'Matt Newitt', 'Alex Clarke', 'Anya Drake'],
+        },
+        rec ? rec.value : {}
+      );
+    },
+    async saveSettings(value) {
+      return this.put('settings', { key: 'app', value });
+    },
+  };
+})();
+
+</script>
+  <script>
+/* Turns raw dictated speech into concise bullet points.
+ * Two modes:
+ *   Tidy.local(text)        — instant, offline, rule-based cleanup.
+ *   Tidy.ai(text, apiKey)   — Claude-powered cleanup (optional, set up in Settings).
+ * Both return an array of bullet strings.
+ */
+const Tidy = (() => {
+
+  // Spoken punctuation / structure commands.
+  const COMMANDS = [
+    [/\b(full stop|period)\b/gi, '.'],
+    [/\bcomma\b/gi, ','],
+    [/\b(new line|newline|new point|next point|new bullet|bullet point)\b/gi, '\n'],
+  ];
+
+  // Filler words that are safe to strip from dictation.
+  const FILLERS = /\b(um+|uh+|erm+|err?|ah+|hmm+|you know|i mean|basically|kind of like|sort of like)\b/gi;
+
+  // Leading conversational lead-ins to drop from the start of a point.
+  const LEAD_INS = /^(and|so|then|also|ok(ay)?|right|well|next)\b[\s,]*/i;
+
+  const BULLET = '• ';
+
+  function cleanPoint(raw) {
+    let t = raw
+      .replace(FILLERS, ' ')
+      .replace(/\s+([.,;:!?])/g, '$1')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    t = t.replace(/^[-•*]+\s*/, ''); // drop any existing bullet marker (re-tidy)
+    t = t.replace(LEAD_INS, '');
+    t = t.replace(/[.,;:\s]+$/g, '');
+    if (!t) return '';
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  function local(text) {
+    let t = ' ' + String(text || '') + ' ';
+    for (const [re, rep] of COMMANDS) t = t.replace(re, rep);
+
+    const points = [];
+    for (const chunk of t.split(/\n+/)) {
+      for (const sentence of chunk.split(/(?<=[.!?])\s+/)) {
+        const p = cleanPoint(sentence);
+        if (p.length > 1 && p !== points[points.length - 1]) points.push(p);
+      }
+    }
+    return points.map((p) => BULLET + p);
+  }
+
+  const SYSTEM_PROMPT = [
+    'You clean up dictated project-review notes.',
+    'Rewrite the raw dictation as concise bullet points, one point per line, no bullet characters.',
+    'Keep every concrete fact: measurements, quantities, locations, names, dates, defects, risks, decisions and actions.',
+    'Remove filler words, repetition and conversational padding. Group closely related fragments into one point.',
+    'Some lines may already be tidy bullet points — keep those, merging duplicates.',
+    'Never invent information that is not in the input.',
+    'Output ONLY the bullet lines, nothing else.',
+  ].join(' ');
+
+  async function ai(text, apiKey) {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        // Required for calling the Anthropic API directly from a browser.
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-8',
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: String(text || '') }],
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => null);
+      throw new Error((err && err.error && err.error.message) || 'API error ' + resp.status);
+    }
+    const data = await resp.json();
+    const out = (data.content || [])
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n');
+    return out
+      .split('\n')
+      .map((l) => l.replace(/^[-•*]\s*/, '').trim())
+      .filter(Boolean)
+      .map((l) => BULLET + l);
+  }
+
+  return { local, ai };
+})();
+
+</script>
+  <script>
+/* Speech-to-text via the Web Speech API.
+ * Best support: Chrome (Android/desktop) and Edge. iOS Safari 14.5+ has partial
+ * support; on unsupported browsers the mic button is hidden and the keyboard's
+ * built-in dictation still works into any text field.
+ *
+ * Emits a single running transcript (onTranscript) rather than one event per
+ * word, so the caller can render dictation as one continuous, non-duplicated
+ * stream instead of a new line per word.
+ */
+function createDictation(handlers) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+
+  let rec = null;
+  let wantActive = false;
+  let committedFinal = ''; // finalized text carried across auto-restarts
+  let instanceFinal = '';  // finalized text within the current recognition instance
+
+  function build() {
+    rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = navigator.language || 'en-GB';
+    instanceFinal = '';
+
+    rec.onresult = (e) => {
+      // Recompute the whole transcript for this instance every event — this is
+      // idempotent, so a result that fires more than once can't be duplicated.
+      let interim = '';
+      let finalNow = '';
+      for (let i = 0; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalNow += r[0].transcript + ' ';
+        else interim += r[0].transcript + ' ';
+      }
+      instanceFinal = finalNow;
+      handlers.onTranscript(committedFinal + instanceFinal, interim);
+    };
+
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        wantActive = false;
+        handlers.onState(false);
+        handlers.onError('Microphone access was blocked. Allow it in your browser settings.');
+      }
+      // 'no-speech' / 'aborted' are routine; onend handles the restart.
+    };
+
+    // Mobile browsers stop recognition after a pause — restart while active,
+    // preserving everything finalized so far.
+    rec.onend = () => {
+      committedFinal += instanceFinal;
+      instanceFinal = '';
+      if (wantActive) {
+        try { rec.start(); } catch (_) { /* already starting */ }
+      } else {
+        handlers.onState(false);
+      }
+    };
+  }
+
+  return {
+    start() {
+      wantActive = true;
+      committedFinal = '';
+      instanceFinal = '';
+      build();
+      try {
+        rec.start();
+        handlers.onState(true);
+      } catch (_) {
+        wantActive = false;
+        handlers.onState(false);
+      }
+    },
+    stop() {
+      wantActive = false;
+      try { rec.stop(); } catch (_) { /* not running */ }
+    },
+    get active() {
+      return wantActive;
+    },
+  };
+}
+
+</script>
+  <script>
+/* Photo annotation editor: sketch freehand lines, straight lines and arrows
+ * over a photo. Annotations are stored as vector strokes (re-editable), and a
+ * flattened image is produced for display/export so the original is preserved.
+ *
+ *   PhotoEditor.open(blob, annotations) -> Promise<{annotations, annotatedBlob} | null>
+ *   PhotoEditor.composite(blob, annotations) -> Promise<Blob>   // flatten strokes onto the image
+ */
+const PhotoEditor = (() => {
+  const COLORS = ['#e63946', '#ffd000', '#22c55e', '#111111', '#ffffff'];
+
+  async function loadBitmap(blob) {
+    if (window.createImageBitmap) {
+      try { return await createImageBitmap(blob); } catch (_) { /* fall through */ }
+    }
+    return await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(blob);
+    });
+  }
+  const dimsOf = (bmp) => ({ w: bmp.width || bmp.naturalWidth, h: bmp.height || bmp.naturalHeight });
+
+  function drawArrowHead(ctx, a, b, w) {
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
+    const len = Math.max(12, w * 5);
+    const spread = Math.PI / 7;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - len * Math.cos(ang - spread), b.y - len * Math.sin(ang - spread));
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - len * Math.cos(ang + spread), b.y - len * Math.sin(ang + spread));
+    ctx.stroke();
+  }
+
+  function drawStroke(ctx, s) {
+    const p = s.points || [];
+    if (!p.length) return;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.width;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    if (s.type === 'free') {
+      ctx.beginPath();
+      ctx.moveTo(p[0].x, p[0].y);
+      for (let i = 1; i < p.length; i++) ctx.lineTo(p[i].x, p[i].y);
+      ctx.stroke();
+    } else {
+      const a = p[0];
+      const b = p[p.length - 1];
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      if (s.type === 'arrow') drawArrowHead(ctx, a, b, s.width);
+    }
+  }
+
+  async function compositeFromBitmap(bmp, annotations) {
+    const { w, h } = dimsOf(bmp);
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(bmp, 0, 0, w, h);
+    for (const s of annotations || []) drawStroke(ctx, s);
+    return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85));
+  }
+
+  async function composite(blob, annotations) {
+    return compositeFromBitmap(await loadBitmap(blob), annotations);
+  }
+
+  function open(blob, annotations) {
+    return new Promise(async (resolve) => {
+      const bmp = await loadBitmap(blob);
+      const { w: iw, h: ih } = dimsOf(bmp);
+      const baseWidth = Math.max(3, Math.round(Math.max(iw, ih) / 220));
+
+      // Deep-copy incoming strokes so a Cancel leaves the original untouched.
+      let strokes = (annotations || []).map((s) => ({
+        type: s.type, color: s.color, width: s.width,
+        points: s.points.map((pt) => ({ x: pt.x, y: pt.y })),
+      }));
+      let current = null;
+      let tool = 'arrow';
+      let color = COLORS[0];
+
+      const overlay = document.createElement('div');
+      overlay.className = 'pe-overlay';
+      overlay.innerHTML = `
+        <div class="pe-toolbar pe-top">
+          <button class="pe-btn" data-act="cancel">Cancel</button>
+          <span class="pe-title">Annotate photo</span>
+          <button class="pe-btn pe-primary" data-act="save">Save</button>
+        </div>
+        <div class="pe-stage"><canvas class="pe-canvas"></canvas></div>
+        <div class="pe-toolbar pe-bottom">
+          <div class="pe-tools">
+            <button class="pe-tool" data-tool="pen" title="Pen">&#9998;</button>
+            <button class="pe-tool" data-tool="arrow" title="Arrow">&#8599;</button>
+            <button class="pe-tool" data-tool="line" title="Line">&#8725;</button>
+          </div>
+          <div class="pe-colors">
+            ${COLORS.map((c) => `<button class="pe-color" data-color="${c}" style="background:${c}"></button>`).join('')}
+          </div>
+          <div class="pe-tools">
+            <button class="pe-btn" data-act="undo">Undo</button>
+            <button class="pe-btn" data-act="clear">Clear</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      document.body.style.overflow = 'hidden';
+
+      const canvas = overlay.querySelector('.pe-canvas');
+      const ctx = canvas.getContext('2d');
+      let k = 1; // canvas pixels per image pixel
+
+      function paintTools() {
+        overlay.querySelectorAll('.pe-tool').forEach((b) =>
+          b.classList.toggle('active', b.dataset.tool === tool));
+        overlay.querySelectorAll('.pe-color').forEach((b) =>
+          b.classList.toggle('active', b.dataset.color === color));
+      }
+
+      function redraw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.scale(k, k);
+        for (const s of strokes) drawStroke(ctx, s);
+        if (current) drawStroke(ctx, current);
+        ctx.restore();
+      }
+
+      function fit() {
+        const stage = overlay.querySelector('.pe-stage');
+        const availW = stage.clientWidth;
+        const availH = stage.clientHeight;
+        if (!availW || !availH) return;
+        const s = Math.min(availW / iw, availH / ih);
+        const cssW = Math.max(1, Math.floor(iw * s));
+        const cssH = Math.max(1, Math.floor(ih * s));
+        const dpr = window.devicePixelRatio || 1;
+        canvas.style.width = cssW + 'px';
+        canvas.style.height = cssH + 'px';
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+        k = canvas.width / iw;
+        redraw();
+      }
+
+      function toImg(ev) {
+        const r = canvas.getBoundingClientRect();
+        return {
+          x: ((ev.clientX - r.left) / r.width) * iw,
+          y: ((ev.clientY - r.top) / r.height) * ih,
+        };
+      }
+
+      let drawing = false;
+      canvas.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        drawing = true;
+        canvas.setPointerCapture(ev.pointerId);
+        const pt = toImg(ev);
+        current = { type: tool === 'pen' ? 'free' : tool, color, width: baseWidth, points: [pt] };
+        if (current.type !== 'free') current.points.push(pt); // start == end until moved
+        redraw();
+      });
+      canvas.addEventListener('pointermove', (ev) => {
+        if (!drawing || !current) return;
+        const pt = toImg(ev);
+        if (current.type === 'free') current.points.push(pt);
+        else current.points[1] = pt;
+        redraw();
+      });
+      function endStroke() {
+        if (!drawing) return;
+        drawing = false;
+        if (current) {
+          const p = current.points;
+          const moved =
+            current.type === 'free'
+              ? p.length > 1
+              : Math.hypot(p[1].x - p[0].x, p[1].y - p[0].y) > baseWidth;
+          if (moved) strokes.push(current);
+        }
+        current = null;
+        redraw();
+      }
+      canvas.addEventListener('pointerup', endStroke);
+      canvas.addEventListener('pointercancel', endStroke);
+      canvas.addEventListener('pointerleave', () => { if (drawing) endStroke(); });
+
+      function close() {
+        window.removeEventListener('resize', fit);
+        overlay.remove();
+        document.body.style.overflow = '';
+      }
+
+      overlay.addEventListener('click', async (ev) => {
+        const tb = ev.target.closest('[data-tool]');
+        if (tb) { tool = tb.dataset.tool; paintTools(); return; }
+        const cb = ev.target.closest('[data-color]');
+        if (cb) { color = cb.dataset.color; paintTools(); return; }
+        const ab = ev.target.closest('[data-act]');
+        if (!ab) return;
+        const act = ab.dataset.act;
+        if (act === 'undo') { strokes.pop(); redraw(); }
+        else if (act === 'clear') { strokes = []; redraw(); }
+        else if (act === 'cancel') { close(); resolve(null); }
+        else if (act === 'save') {
+          const annotatedBlob = strokes.length ? await compositeFromBitmap(bmp, strokes) : null;
+          close();
+          resolve({ annotations: strokes, annotatedBlob });
+        }
+      });
+
+      window.addEventListener('resize', fit);
+      paintTools();
+      // Let layout settle so the stage has measurable dimensions.
+      requestAnimationFrame(fit);
+    });
+  }
+
+  return { open, composite };
+})();
+
+</script>
+  <script>
+/* Builds the standardised review form as a self-contained HTML document.
+ * Open it in a new tab to Print / Save as PDF, or download the file itself.
+ */
+const Exporter = (() => {
+  const esc = (s) =>
+    String(s ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+
+  const STATUS_LABELS = { active: 'Active', onhold: 'On hold', complete: 'Complete' };
+
+  function metaRow(label, value) {
+    if (!value) return '';
+    return `<tr><th>${esc(label)}</th><td>${esc(value)}</td></tr>`;
+  }
+
+  /* photoUrls: Map photoId -> data URL
+   * embedded: true when shown inside the app's in-page preview iframe
+   *   (no print toolbar, white page background, full-width sheet). */
+  function buildHtml({ project, review, settings, photoUrls, embedded }) {
+    const sectionsHtml = (review.sections || [])
+      .map((sec, si) => {
+        const bullets = String(sec.notes || '')
+          .split('\n')
+          .map((l) => l.replace(/^[-•*]\s*/, '').trim())
+          .filter(Boolean)
+          .map((l) => `<li>${esc(l)}</li>`)
+          .join('');
+
+        const photos = (sec.photos || [])
+          .map((p, pi) => {
+            const url = photoUrls.get(p.id);
+            if (!url) return '';
+            const label = `Photo ${si + 1}.${pi + 1}`;
+            const caption = p.caption ? ` — ${esc(p.caption)}` : '';
+            return `<figure><img src="${url}" alt="${esc(label)}"><figcaption>${label}${caption}</figcaption></figure>`;
+          })
+          .join('');
+
+        return `
+        <section class="review-section">
+          <h2>${si + 1}. ${esc(sec.title || 'Untitled section')}</h2>
+          ${bullets ? `<ul>${bullets}</ul>` : '<p class="none">No notes recorded.</p>'}
+          ${photos ? `<div class="photo-grid">${photos}</div>` : ''}
+        </section>`;
+      })
+      .join('');
+
+    const nextSteps = String(review.nextSteps || '')
+      .split('\n')
+      .map((l) => l.replace(/^[-•*]\s*/, '').trim())
+      .filter(Boolean);
+    const nextStepsPhotos = (review.nextStepsPhotos || [])
+      .map((p, pi) => {
+        const url = photoUrls.get(p.id);
+        if (!url) return '';
+        const label = `Photo N.${pi + 1}`;
+        const caption = p.caption ? ` — ${esc(p.caption)}` : '';
+        return `<figure><img src="${url}" alt="${esc(label)}"><figcaption>${label}${caption}</figcaption></figure>`;
+      })
+      .join('');
+    const nextStepsHtml = `
+      <section class="review-section next-steps">
+        <h2>Next steps</h2>
+        ${nextSteps.length
+          ? `<ul>${nextSteps.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>`
+          : '<p class="none">None recorded.</p>'}
+        ${nextStepsPhotos ? `<div class="photo-grid">${nextStepsPhotos}</div>` : ''}
+      </section>`;
+
+    const reviewerList = Array.isArray(review.reviewers)
+      ? review.reviewers.filter(Boolean)
+      : review.reviewer ? [review.reviewer] : [];
+
+    const signoffHtml = (reviewerList.length ? reviewerList : ['reviewer'])
+      .map((n) => `<div class="line">Signed (${esc(n)})</div><div class="line">Date</div>`)
+      .join('');
+
+    const generated = new Date().toLocaleString();
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — ${esc(project.name)} — ${esc(review.date || '')}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 13px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         color: #16212e; background: ${embedded ? '#fff' : '#e9ecef'}; }
+  .sheet { max-width: 800px; margin: 0 auto; background: #fff;
+           padding: ${embedded ? '20px 20px 28px' : '34px 40px'}; }
+  .doc-header { display: flex; justify-content: space-between; align-items: flex-start;
+                border-bottom: 3px solid #1d3557; padding-bottom: 12px; margin-bottom: 18px; }
+  .doc-header h1 { font-size: 20px; color: #1d3557; letter-spacing: .04em; }
+  .doc-header .company { font-size: 14px; font-weight: 600; text-align: right; }
+  .doc-header .subtitle { color: #5a6b7d; font-size: 12px; margin-top: 2px; }
+  table.meta { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
+  table.meta th, table.meta td { border: 1px solid #cfd8e0; padding: 6px 10px; text-align: left; }
+  table.meta th { background: #f1f4f7; width: 28%; font-weight: 600; color: #33465c; }
+  .review-section { margin-bottom: 20px; break-inside: avoid-page; }
+  .review-section h2 { font-size: 14.5px; color: #1d3557; background: #f1f4f7;
+                       border-left: 4px solid #1d3557; padding: 6px 10px; margin-bottom: 8px; }
+  .review-section ul { margin: 0 0 8px 22px; }
+  .review-section li { margin-bottom: 3px; }
+  .none { color: #8a97a5; font-style: italic; margin-bottom: 8px; }
+  .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .photo-grid figure { break-inside: avoid; }
+  .photo-grid img { width: 100%; border: 1px solid #cfd8e0; }
+  .photo-grid figcaption { font-size: 11px; color: #5a6b7d; margin-top: 3px; }
+  .signoff { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
+  .signoff .line { border-top: 1px solid #33465c; padding-top: 4px; font-size: 12px; color: #33465c; }
+  .doc-footer { margin-top: 26px; font-size: 10.5px; color: #8a97a5;
+                border-top: 1px solid #e1e7ec; padding-top: 6px; }
+  .toolbar { position: sticky; top: 0; background: #1d3557; color: #fff; padding: 10px;
+             display: flex; gap: 10px; justify-content: center; }
+  .toolbar button { font: inherit; padding: 8px 18px; border: 0; border-radius: 6px;
+                    background: #e63946; color: #fff; cursor: pointer; }
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .sheet { max-width: none; padding: 0; }
+    @page { margin: 18mm 15mm; }
+  }
+</style>
+</head>
+<body>
+${embedded ? '' : '<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>'}
+<div class="sheet">
+  <div class="doc-header">
+    <div>
+      <h1>PROJECT REVIEW REPORT</h1>
+      <div class="subtitle">${esc(review.title || 'Review')}</div>
+    </div>
+    <div class="company">${esc(settings.company || '')}</div>
+  </div>
+
+  <table class="meta">
+    ${metaRow('Project', project.name)}
+    ${metaRow('Project aspect', project.aspect)}
+    ${metaRow('Reference', project.ref)}
+    ${metaRow('CAD name', project.cadName)}
+    ${metaRow('CAD version', project.cadVersion)}
+    ${metaRow('Location', project.location)}
+    ${metaRow('Project status', STATUS_LABELS[project.status] || project.status)}
+    ${metaRow('Review date', review.date)}
+    ${metaRow('Reviewed by', reviewerList.join(', '))}
+  </table>
+
+  ${sectionsHtml || '<p class="none">No review sections.</p>'}
+
+  ${nextStepsHtml}
+
+  <div class="signoff">
+    ${signoffHtml}
+  </div>
+
+  <div class="doc-footer">Generated ${esc(generated)} · Project Review app</div>
+</div>
+</body>
+</html>`;
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob);
+    });
+  }
+
+  async function collectPhotoUrls(review) {
+    const urls = new Map();
+    const refs = [];
+    for (const sec of review.sections || []) for (const p of sec.photos || []) refs.push(p);
+    for (const p of review.nextStepsPhotos || []) refs.push(p);
+    for (const p of refs) {
+      const rec = await DB.get('photos', p.id);
+      // Prefer the flattened annotated image so sketches show on the form.
+      const blob = rec && (rec.annotatedBlob || rec.blob);
+      if (blob) urls.set(p.id, await blobToDataUrl(blob));
+    }
+    return urls;
+  }
+
+  async function makeDocument(project, review, settings, opts) {
+    const photoUrls = await collectPhotoUrls(review);
+    return buildHtml({ project, review, settings, photoUrls, embedded: !!(opts && opts.embedded) });
+  }
+
+  function filename(project, review) {
+    const slug = (s) => String(s || '').trim().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '');
+    return `review_${slug(project.name) || 'project'}_${review.date || 'undated'}.html`;
+  }
+
+  return {
+    async openPrintView(project, review, settings) {
+      const html = await makeDocument(project, review, settings);
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      window.open(url, '_blank');
+    },
+    async download(project, review, settings) {
+      const html = await makeDocument(project, review, settings);
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename(project, review);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    },
+    /* HTML string for the in-app read-only preview (rendered inside an iframe). */
+    async previewHtml(project, review, settings) {
+      return makeDocument(project, review, settings, { embedded: true });
+    },
+    _buildHtml: buildHtml, // exposed for testing
+  };
+})();
+
+</script>
+  <script>
 /* Main app: hash routing, views, autosave. */
 (() => {
   const view = document.getElementById('view');
@@ -943,3 +1993,7 @@
     };
   }
 })();
+
+</script>
+</body>
+</html>
